@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Operations Portal · MIS Operations</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f4f1e8;--card:#fff;--head:#1d3a2f;--brand:#5c6b3a;--rule:#7a8a3c;--title:#0a6ea8;--tile:#f1ecd5;--icon:#6b7048;--foot:#8a9a8a;--shadow:0 6px 18px rgba(60,60,30,.12);--line:#e4e0d2}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a16;--card:#1d2620;--head:#e6efe3;--brand:#b4c27f;--rule:#9bb04a;--title:#6cc0f0;--tile:#2b3524;--icon:#c3cf93;--foot:#7e8f82;--shadow:0 6px 18px rgba(0,0,0,.35);--line:#2e3a31}}
+:root[data-theme="dark"]{--bg:#141a16;--card:#1d2620;--head:#e6efe3;--brand:#b4c27f;--rule:#9bb04a;--title:#6cc0f0;--tile:#2b3524;--icon:#c3cf93;--foot:#7e8f82;--shadow:0 6px 18px rgba(0,0,0,.35);--line:#2e3a31}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--head);font-family:Sora,system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:28px 20px 40px;text-align:center}
+.brand{display:flex;align-items:center;justify-content:center;gap:14px}
+.brand span{font-weight:700;letter-spacing:.14em;color:var(--brand);font-size:1.05rem;text-transform:uppercase}
+h1{font-size:clamp(1.5rem,4.4vw,2.4rem);font-weight:700;margin:46px 0 14px;letter-spacing:-.01em}
+.rule{width:70px;height:5px;border-radius:3px;background:var(--rule);margin:0 auto 38px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:26px 28px;max-width:950px;margin:0 auto;text-align:left}
+.card{display:flex;align-items:center;gap:20px;background:var(--card);border:1px solid var(--line);border-radius:30px;padding:28px 30px;box-shadow:var(--shadow);color:var(--title);font:inherit;font-weight:700;font-size:1.15rem;text-decoration:none;cursor:pointer;width:100%;min-height:130px}
+.card:hover{transform:translateY(-2px)}
+.tile{flex:none;width:70px;height:70px;border-radius:18px;background:var(--tile);color:var(--icon);display:grid;place-items:center}
+.tile svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.card small{display:block;font-weight:400;font-size:.8rem;color:var(--foot);margin-top:4px;word-break:break-all}
+:focus-visible{outline:3px solid #d49b00;outline-offset:3px}
+.sub{max-width:950px;margin:0 auto 22px;text-align:left}
+.back{background:none;border:0;color:var(--brand);font:inherit;font-weight:600;cursor:pointer;padding:6px 0}
+.file{max-width:950px;margin:22px auto 0;text-align:left;font-size:.88rem;color:var(--foot)}
+.file button{background:none;border:0;color:var(--title);font:inherit;cursor:pointer;text-decoration:underline;padding:0 4px}
+.foot{margin-top:46px;font-size:.78rem;letter-spacing:.1em;color:var(--foot);text-transform:uppercase}
+.theme{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;background:var(--card);color:var(--head);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font:inherit;font-size:.8rem;cursor:pointer}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--head);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.88rem;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%}
+.toast.on{opacity:1}
+[hidden]{display:none!important}
+@media (max-width:640px){.grid{grid-template-columns:1fr}.card{min-height:100px;padding:20px}}
+@media (prefers-reduced-motion:reduce){.card:hover{transform:none}.toast{transition:none}}
+</style>
+</head>
+<body>
+<button class="theme" id="theme" type="button">Theme</button>
+<main>
+  <div class="brand">
+    <span>MIS Operations</span>
+  </div>
+  <input type="file" id="cleanerPick" accept=".html,.htm,text/html" hidden>
+
+  <h1 id="title">Select the system that you want to view</h1>
+  <div class="rule"></div>
+
+  <div id="home" class="grid"></div>
+
+  <div id="midas" hidden>
+    <div class="sub"><button class="back" id="back" type="button">&larr; Back to systems</button></div>
+    <div class="grid" id="midasGrid"></div>
+    <p class="file" id="fileInfo"></p>
+  </div>
+
+  <div class="foot">Operations Portal · MIS Operations</div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const I={
+ midas:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+ cleaner:'<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
+ link:'<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+ globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+ sms:'<path d="M4 5h16v11H9l-5 4z"/>',
+ cic:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5L15.5 10"/>'
+};
+const URLS={
+ link:'https://midas.midas.com.ph/Main/Login',
+ atmos:'https://www.jyosna.net/SFI/?rdr=/SFI/ATMOS/ATMOS.aspx',
+ sms:'https://saklawfoundationinc.com/adminjeckpogi/sfisaklaw_foundation_inc_sing-in',
+ cic:'https://www.creditinfo.gov.ph/cicportal/main.php?nid=15&sid=2&rid=0'
+};
+const $=s=>document.querySelector(s);
+const host=u=>{try{return new URL(u).host}catch(e){return u}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tile=k=>`<span class="tile"><svg viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg></span>`;
+const linkCard=(k,label)=>`<a class="card" href="${esc(URLS[k])}" target="_blank" rel="noopener noreferrer">${tile(k==='atmos'?'globe':k)}<span>${label}<small>${esc(host(URLS[k]))}</small></span></a>`;
+const btnCard=(id,icon,label,sub)=>`<button class="card" type="button" id="${id}">${tile(icon)}<span>${label}${sub?`<small>${sub}</small>`:''}</span></button>`;
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),2800)}
+function show(view){
+  $('#home').hidden=view!=='home';$('#midas').hidden=view!=='midas';
+  $('#title').textContent=view==='midas'?'Select a Midas tool':'Select the system that you want to view';
+}
+
+/* Cleaner HTML file kept in this browser (IndexedDB) */
+const DB={
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open('sysCards',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+  async get(k){const d=await this.open();return new Promise((res,rej)=>{const q=d.transaction('f').objectStore('f').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})},
+  async set(k,v){const d=await this.open();return new Promise((res,rej)=>{const q=d.transaction('f','readwrite').objectStore('f').put(v,k);q.onsuccess=()=>res();q.onerror=()=>rej(q.error)})}
+};
+let cleaner=null,wantOpen=false;
+async function loadCleaner(){try{cleaner=await DB.get('cleaner')||null}catch(e){cleaner=null}renderMidas()}
+function renderMidas(){
+  $('#midasGrid').innerHTML=btnCard('cleanerBtn','cleaner','Midas Cleaner',cleaner?esc(cleaner.name):'Choose your cleaner .html file')+linkCard('link','Midas Link');
+  $('#fileInfo').innerHTML=cleaner?`Cleaner file: <strong>${esc(cleaner.name)}</strong><button type="button" id="replace">Replace file</button>`:'No cleaner file chosen yet. It stays in this browser only.';
+}
+function launchCleaner(){
+  if(!cleaner){wantOpen=true;$('#cleanerPick').click();return}
+  const w=window.open('','_blank');
+  const url=URL.createObjectURL(new Blob([cleaner.text],{type:'text/html'}));
+  if(!w){toast('Pop-up blocked. Allow pop-ups for this page, then try again.');return}
+  w.location.href=url;
+}
+$('#cleanerPick').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  const text=await f.text();cleaner={name:f.name,text};
+  try{await DB.set('cleaner',cleaner)}catch(err){toast('Loaded for now, but this browser would not save it.')}
+  renderMidas();
+  if(wantOpen){wantOpen=false;toast(f.name+' loaded. Tap Midas Cleaner to open it.')}else toast('Cleaner file replaced.');
+});
+document.addEventListener('click',e=>{
+  if(e.target.closest('#cleanerBtn'))launchCleaner();
+  if(e.target.closest('#replace')){wantOpen=false;$('#cleanerPick').click()}
+  if(e.target.closest('#midasCard')){show('midas')}
+});
+$('#back').onclick=()=>show('home');
+
+$('#theme').onclick=()=>{
+  const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  r.dataset.theme=dark?'light':'dark';
+};
+
+$('#home').innerHTML=btnCard('midasCard','midas','Midas','Cleaner and Link')+linkCard('atmos','Atmos Website Card')+linkCard('sms','SMS')+linkCard('cic','CIC');
+renderMidas();loadCleaner();
+</script>
+</body>
+</html>
