@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Report Cleaner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root{
+    --paper:#F5F2EB;
+    --paper-dim:#ECE7DC;
+    --ink:#1B2430;
+    --ink-soft:#5B6472;
+    --rule:#D8D2C4;
+    --brass:#A97B2E;
+    --brass-soft:#EFE2C7;
+    --rust:#A6412B;
+    --rust-soft:#F3DED7;
+    --forest:#3F6B4F;
+    --forest-soft:#DEEAE1;
+    --mono:"IBM Plex Mono","SF Mono",Consolas,monospace;
+    --sans:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:14px;
+  }
+  .app{display:grid;grid-template-columns:340px 1fr;min-height:100vh;}
+  header.top{
+    grid-column:1/-1;
+    padding:22px 28px 18px;
+    border-bottom:1px solid var(--rule);
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+  }
+  header.top .brand{display:flex;align-items:baseline;gap:12px;}
+  header.top h1{
+    font-family:var(--mono);
+    font-size:18px;
+    letter-spacing:0.5px;
+    margin:0;
+    font-weight:600;
+  }
+  header.top .tag{color:var(--ink-soft);font-size:12.5px;}
+  header.top .form-id{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--ink-soft);
+    border:1px solid var(--rule);
+    padding:4px 9px;
+    border-radius:3px;
+    background:var(--paper-dim);
+  }
+
+  aside{
+    border-right:1px solid var(--rule);
+    padding:20px 0 40px;
+    background:var(--paper-dim);
+  }
+  aside h2{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:0 24px 12px;
+  }
+  .steps{list-style:none;margin:0;padding:0;}
+  .step{
+    display:flex;
+    gap:12px;
+    padding:10px 24px;
+    border-bottom:1px solid var(--rule);
+    align-items:flex-start;
+    cursor:default;
+  }
+  .step .num{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-soft);
+    width:20px;
+    padding-top:2px;
+    flex-shrink:0;
+  }
+  .step .dot{
+    width:9px;height:9px;border-radius:50%;
+    border:1.5px solid var(--rule);
+    margin-top:4px;
+    flex-shrink:0;
+    background:transparent;
+  }
+  .step.pass .dot{background:var(--forest);border-color:var(--forest);}
+  .step.flag .dot{background:var(--rust);border-color:var(--rust);}
+  .step.running .dot{background:var(--brass);border-color:var(--brass);}
+  .step .body{flex:1;}
+  .step label{
+    display:block;
+    font-size:12.6px;
+    font-weight:600;
+    line-height:1.3;
+    cursor:pointer;
+  }
+  .step .desc{
+    font-size:11.3px;
+    color:var(--ink-soft);
+    line-height:1.4;
+    margin-top:2px;
+  }
+  .step .result{
+    font-family:var(--mono);
+    font-size:11px;
+    margin-top:4px;
+    color:var(--brass);
+  }
+  .step input[type=checkbox]{
+    margin:2px 0 0;
+    accent-color:var(--brass);
+  }
+
+  main{padding:28px 34px 60px;}
+  .panel{
+    background:#fff;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    margin-bottom:22px;
+  }
+  .panel h3{
+    font-family:var(--mono);
+    font-size:12.5px;
+    letter-spacing:0.8px;
+    text-transform:uppercase;
+    margin:0;
+    padding:14px 18px;
+    border-bottom:1px solid var(--rule);
+    color:var(--ink-soft);
+    display:flex;
+    justify-content:space-between;
+  }
+  .panel .content{padding:18px;}
+
+  .dropzones{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .drop{
+    border:1.5px dashed var(--rule);
+    border-radius:4px;
+    padding:22px 14px;
+    text-align:center;
+    background:var(--paper-dim);
+    transition:border-color .15s;
+  }
+  .drop.has-file{border-color:var(--forest);background:var(--forest-soft);}
+  .drop .icon{font-family:var(--mono);font-size:20px;color:var(--ink-soft);}
+  .drop .lbl{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  .drop .fname{font-family:var(--mono);font-size:11.5px;margin-top:8px;color:var(--ink);word-break:break-all;}
+  .drop input{display:none;}
+  .drop button{
+    margin-top:10px;
+    font-size:11.5px;
+    border:1px solid var(--rule);
+    background:#fff;
+    padding:6px 12px;
+    border-radius:3px;
+    cursor:pointer;
+    font-family:var(--sans);
+  }
+  .drop button:hover{border-color:var(--brass);color:var(--brass);}
+
+  .actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .btn{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:0.4px;
+    padding:10px 18px;
+    border-radius:3px;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    cursor:pointer;
+  }
+  .btn.secondary{background:transparent;color:var(--ink);border:1px solid var(--rule);}
+  .btn.brass{background:var(--brass);border-color:var(--brass);color:#fff;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn:hover:not(:disabled){opacity:.85;}
+
+  .stat-row{display:flex;gap:22px;margin-top:14px;flex-wrap:wrap;}
+  .stat{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);}
+  .stat b{color:var(--ink);font-size:15px;display:block;font-family:var(--mono);}
+
+  table{width:100%;border-collapse:collapse;font-size:11.5px;font-family:var(--mono);}
+  thead th{
+    text-align:left;
+    background:var(--paper-dim);
+    padding:7px 9px;
+    border-bottom:1px solid var(--rule);
+    white-space:nowrap;
+    position:sticky;top:0;
+  }
+  tbody td{padding:6px 9px;border-bottom:1px solid var(--rule);white-space:nowrap;}
+  tbody tr:hover{background:var(--paper-dim);}
+  .table-wrap{max-height:360px;overflow:auto;border:1px solid var(--rule);border-radius:3px;}
+  .flagged-row{background:var(--rust-soft) !important;}
+  .empty-note{color:var(--ink-soft);font-size:12px;padding:30px 0;text-align:center;}
+
+  .log{
+    font-family:var(--mono);
+    font-size:11.5px;
+    line-height:1.7;
+    max-height:220px;
+    overflow:auto;
+    background:var(--paper-dim);
+    border-radius:3px;
+    padding:10px 14px;
+  }
+  .log .l-ok{color:var(--forest);}
+  .log .l-flag{color:var(--rust);}
+  .log .l-info{color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <h1>REPORT CLEANER</h1>
+      <span class="tag">merge &middot; validate &middot; export</span>
+    </div>
+    <span class="form-id">rev.01 &middot; basic system</span>
+  </header>
+
+  <aside>
+    <h2>Pipeline &mdash; 25 steps</h2>
+    <ul class="steps" id="stepList"></ul>
+  </aside>
+
+  <main>
+
+    <div class="panel">
+      <h3><span>01 &nbsp;Upload &amp; merge</span></h3>
+      <div class="content">
+        <div class="dropzones">
+          <div class="drop" id="drop1">
+            <div class="icon">[ FILE A ]</div>
+            <div class="lbl">First file export (.xlsx / .csv)</div>
+            <div class="fname" id="fname1">no file selected</div>
+            <input type="file" id="file1" accept=".xlsx,.xls,.csv">
+            <button type="button" onclick="document.getElementById('file1').click()">Choose file</button>
+          </div>
+          <div class="drop" id="drop2">
+            <div class="icon">[ FILE B ]</div>
+            <div class="lbl">Second file export (.xlsx / .csv)</div>
+            <div class="fname" id="fname2">no file selected</div>
+            <input type="file" id="file2" accept=".xlsx,.xls,.csv">
+            <button type="button" onclick="document.getElementById('file2').click()">Choose file</button>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="mergeBtn" disabled onclick="mergeFiles()">Merge files</button>
+          <button class="btn secondary" onclick="resetAll()">Reset</button>
+        </div>
+        <div class="stat-row" id="mergeStats"></div>
+
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--rule);">
+          <label for="dateOverride" style="display:block;font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-bottom:6px;">
+            Report date (for filename) &mdash; leave blank to auto-detect from Cut Off Date
+          </label>
+          <input type="date" id="dateOverride"
+            style="font-family:var(--mono);font-size:12px;padding:7px 10px;border:1px solid var(--rule);border-radius:3px;background:#fff;color:var(--ink);">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>
+        <span>02 &nbsp;Preview</span>
+        <span id="previewCount" style="font-family:var(--mono);font-weight:normal;"></span>
+      </h3>
+      <div class="content">
+        <div class="table-wrap" id="tableWrap">
+          <div class="empty-note">Merge two files to see data here.</div>
+        </div>
+        <div class="actions">
+          <button class="btn brass" id="runBtn" disabled onclick="runPipeline()">Run pipeline on checked steps</button>
+          <button class="btn secondary" id="downloadBtn" disabled onclick="downloadFile()">Download cleaned .xlsx</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span>03 &nbsp;Run log</span></h3>
+      <div class="content">
+        <div class="log" id="logBox"><span class="l-info">Waiting for a run&hellip;</span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ---------------------------------------------------------
+   REPORT CLEANER — basic working system
+   Reads two spreadsheets, merges them, runs a 15-step
+   cleaning pipeline against reports submission rules, and
+   exports the result as .xlsx.
+
+   Column names are matched loosely (case/space-insensitive,
+   using an alias list) since exact MIDAS headers vary.
+   Steps that can't find their target column are skipped
+   and logged, rather than failing the whole run.
+--------------------------------------------------------- */
+
+const STEP_DEFS = [
+  {id:1,  title:"Sort by Client Reference",              desc:"Alphabetical A→Z on the client reference column."},
+  {id:2,  title:"Sort by Term",                           desc:"Sorts the Term column."},
+  {id:3,  title:"Filter Term = 21 or 46",                 desc:"Deletes any row whose Term is not 21 or 46."},
+  {id:4,  title:"Sort Loan Purpose A→Z",                  desc:"Alphabetical A→Z on the Loan Purpose column."},
+  {id:5,  title:"Fill blank Loan Purpose with ET",        desc:"Sets Loan Purpose to 'ET' wherever it's empty (no rows deleted)."},
+  {id:6,  title:"Replace UK → ET in Loan Purpose",        desc:"Any 'UK' value/word in Loan Purpose becomes 'ET'."},
+  {id:7,  title:"Sort DateGranted",                       desc:"Sorts the DateGranted column."},
+  {id:8,  title:"Sort DateDue",                           desc:"Sorts the DateDue column."},
+  {id:9,  title:"Remove blank DateDue rows",              desc:"Deletes any row where DateDue is empty."},
+  {id:10, title:"Remove Semi Annually",                   desc:"Deletes rows where Payment Frequency = Semi Annually."},
+  {id:11, title:"Sort NoOfOutstandingPayments A→Z",       desc:"Sorts the outstanding-payments column."},
+  {id:12, title:"Sort Remarks A→Z",                       desc:"Sorts the remarks column."},
+  {id:13, title:"Delete Fully Settled rows (non-zero outstanding)", desc:"If Remarks = Fully Settled AND NoOfOutstandingPayments ≠ 0, deletes the entire row. Fully Settled rows with 0 (or unreadable) outstanding are left untouched."},
+  {id:14, title:"Blank invalid Mother's Maiden Name",     desc:"Clears MothersMaidenFirstName / MiddleName / LastName if it contains digits or symbols."},
+  {id:15, title:"Flag borrowers under 18",                desc:"Adds an Age_Flag column, does not delete rows."},
+  {id:16, title:"Blank invalid Birthplace / Street",      desc:"Clears fields that contain no letters (digits/symbols only)."},
+  {id:17, title:"Remove single-letter initials / symbols", desc:"Blanks MiddleName / PreviousLastName / Mother's Maiden First+Middle+Last Name if it's a single initial or contains symbols."},
+  {id:18, title:"TRIM every cell",                        desc:"Equivalent to =TRIM() across the whole sheet."},
+  {id:19, title:"Blank contact numbers containing \"-\"", desc:"Any contact number with a dash is cleared."},
+  {id:20, title:"Blank ID columns",                       desc:"Clears PrimaryIDType, PrimaryIDNo, SecondaryIDType, SecondaryIDNo, SecondaryIDExpirationDate — headers stay, values are wiped."},
+  {id:21, title:"Remove blank DateGranted rows",          desc:"Deletes any row where DateGranted is empty."},
+  {id:22, title:"Sort First Name A→Z, then Last Name A→Z", desc:"Sorts by FirstName first, then re-sorts by LastName — since sort is stable, the final order is by Last Name, with First Name breaking ties."},
+  {id:23, title:"Blank invalid Name Suffix",               desc:"Clears Suffix unless it's a real name suffix (Jr., Sr., Junior, Senior, I–VI)."},
+  {id:24, title:"Remove consecutive spaces",               desc:"Collapses any run of 2+ spaces down to one, across every column."},
+  {id:25, title:"Blank incomplete Mother's Maiden Name",   desc:"If only one of MothersMaidenFirstName / MotherMaidenMiddleName / MotherMaidenLastName has a value (the other two are blank), blanks that one too."},
+];
+
+const ALIASES = {
+  clientRef:      ["clientreference","clientref","clientno","clientnumber","clientid"],
+  term:           ["term","loanterm"],
+  loanPurpose:    ["loanpurpose","purpose"],
+  paymentFreq:    ["payfreq","paymentfrequency","paymentfreq","frequency"],
+  outstanding:    ["noofoutstandingpayments","outstandingpayments","noofoutstanding"],
+  remarks:        ["remarks","remark","status","loanstatus"],
+  maidenName:     ["mothermaidenname","mothersmaidenname","maidenname"],
+  dob:            ["birthdate","dateofbirth","dob","birthdt"],
+  birthplace:     ["birthplace","placeofbirth"],
+  street:         ["street","streetaddress","address1"],
+  firstName:     ["firstname","first"],
+  lastName:       ["lastname","last","surname"],
+  middleName:     ["middlename","middle","mname"],
+  suffix:         ["suffix","namesuffix","suffixname"],
+  prevLastName:   ["previouslastname","prevlastname","formerlastname"],
+  contactNumber:  ["contactno","contactnumber","mobileno","mobilenumber","phonenumber","phoneno","cellno"],
+  dateDue:        ["datedue"],
+  dateGranted:    ["dategranted"],
+};
+
+// ---------- header canonicalization ----------
+// The two files being merged don't always use the exact same header text for
+// the same field (e.g. File A says "ContactNo", File B says "CONTACT_NO").
+// mergeFiles() unions headers by *exact* string match, so any spelling
+// mismatch used to create two separate columns for the same data instead of
+// one. To fix that at the source, every header from both files is rewritten
+// to the one true PODs Template spelling before merging.
+const CANONICAL_HEADERS = [
+  "ClientReference","LastName","FirstName","MiddleName","Suffix","PreviousLastName",
+  "Street","Barangay","CityMunicipality","Province","ZIP_CODE","BirthDate","BirthPlace",
+  "Gender","CivilStatus","CONTACT_NO","MothersMaidenFirstName","MotherMaidenMiddleName",
+  "MotherMaidenLastName","PrimaryIDType","PrimaryIDNo","SecondaryIDType","SecondaryIDNo",
+  "SecondaryIDExpirationDate","LoanReference","ContractType","ContractPhase","TransactionType",
+  "LoanAmountDisbursed","PrincipalBalance","DateGranted","DateDue","InterestRate","PayFreq",
+  "Term","Currency","LoanPurpose","PODType","TotalLoanBalance","ContractActualEndDate",
+  "OverdueDays","MONTHLY_PAYMENT_AMOUNT","NoOfOutstandingPayments","AmountOfLastPayment",
+  "LastPaymentDate","Remarks",
+];
+// normalized(canonical) -> canonical spelling. Catches spelling/case/underscore
+// variants whose normalized form already matches the target column exactly
+// (e.g. "ZIPCODE"→ZIP_CODE, "ContactNo"→CONTACT_NO, "PROVINCE"→Province,
+// "CITY_MUNICIPALITY"→CityMunicipality, "NO_OF_OUTSTANDING_PAYMENTS"→NoOfOutstandingPayments).
+const CANONICAL_BY_NORM = {};
+CANONICAL_HEADERS.forEach(h => { CANONICAL_BY_NORM[normHeader(h)] = h; });
+// Explicit aliases for headers that mean the same field but don't normalize
+// to the same string as the canonical name (e.g. a "sitio/purok" label that's
+// really the Street field). Add more entries here as new variants show up.
+const CANONICAL_HEADER_ALIASES = {
+  "nostreetsitiopurok": "Street",           // NO_STREET_SITIO_PUROK
+  "barangaydistrict":   "Barangay",         // BARANGAY_DISTRICT
+};
+function canonicalizeHeader(h){
+  const n = normHeader(h);
+  if(CANONICAL_HEADER_ALIASES[n]) return CANONICAL_HEADER_ALIASES[n];
+  if(CANONICAL_BY_NORM[n]) return CANONICAL_BY_NORM[n];
+  return h; // not a recognized template column — leave as-is
+}
+
+let file1Parsed = null, file2Parsed = null; // {meta, headers, rows}
+let wbMeta = [];            // template wrapper rows (Title/Institution/Cut Off Date/No. Of Clients/BEGIN), preserved from File A
+let headers = [];           // current header order
+let rows = [];              // array of row objects
+let originalHeaders = [];   // headers right after merge (before any column removal)
+let hasRun = false;
+
+// ---------- helpers ----------
+function normHeader(h){
+  return String(h||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+}
+function findColumn(aliasKey){
+  const wanted = ALIASES[aliasKey];
+  for(const h of headers){
+    if(wanted.includes(normHeader(h))) return h;
+  }
+  return null;
+}
+// (MothersMaidenFirstName / MotherMaidenMiddleName / MotherMaidenLastName).
+// Match lahat boi, plus fall back to a single "maidenName" alias column 
+// Alias yung pagkikilanlan na nakaset
+function findMaidenNameColumns(){
+  const found = headers.filter(h => /mothers?maiden/i.test(normHeader(h)));
+  if(found.length) return found;
+  const single = findColumn("maidenName");
+  return single ? [single] : [];
+}
+function isIdColumn(h){
+  const n = normHeader(h);
+  return /^(primary|secondary|tertiary)?id(type|no|number|expirationdate|expdate|exp)?$/.test(n);
+}
+function trimVal(v){
+  if(v===null||v===undefined) return "";
+  return String(v).trim();
+}
+function log(msg, cls){
+  const box = document.getElementById("logBox");
+  if(box.innerHTML.includes("Waiting for a run")) box.innerHTML="";
+  const span = document.createElement("div");
+  span.className = cls||"l-info";
+  span.textContent = msg;
+  box.appendChild(span);
+  box.scrollTop = box.scrollHeight;
+}
+function setStepState(id, state, resultText){
+  const el = document.querySelector(`.step[data-id="${id}"]`);
+  if(!el) return;
+  el.classList.remove("pass","flag","running");
+  if(state) el.classList.add(state);
+  const r = el.querySelector(".result");
+  if(resultText!==undefined) r.textContent = resultText;
+}
+
+// ---------- render step list ----------
+function renderSteps(){
+  const ul = document.getElementById("stepList");
+  ul.innerHTML = "";
+  STEP_DEFS.forEach(s=>{
+    const li = document.createElement("li");
+    li.className = "step";
+    li.dataset.id = s.id;
+    li.innerHTML = `
+      <span class="num">${String(s.id).padStart(2,"0")}</span>
+      <input type="checkbox" id="chk${s.id}" checked>
+      <div class="body">
+        <label for="chk${s.id}">${s.title}</label>
+        <div class="desc">${s.desc}</div>
+        <div class="result"></div>
+      </div>`;
+    ul.appendChild(li);
+  });
+}
+renderSteps();
+
+// ---------- file loading ----------
+// MIDAS PODs Template files look like:
+//   Institution   SFI
+//   Cut Off Date  07/31/2026
+//   No. Of Clients 22883
+//   BEGIN
+//   ClientReference, LastName, ... <- real header row
+//   <data rows...>
+//   END
+// This parses out that wrapper so it can be rebuilt correctly on export,
+// and falls back gracefully to "row 0 is the header" for plain sheets.
+function parseAOA(aoa){
+  let headerIdx = aoa.findIndex(r => r && normHeader(r[0]) === "clientreference");
+  if(headerIdx === -1) headerIdx = 0; // plain flat file, no template wrapper
+
+  const metaRows = aoa.slice(0, headerIdx).map(r => [...r]);
+
+  let headerRow = (aoa[headerIdx] || []).map(h => String(h===undefined||h===null?"":h).trim());
+  let last = headerRow.length - 1;
+  while(last >= 0 && headerRow[last] === "") last--;
+  headerRow = headerRow.slice(0, last + 1);
+  headerRow = headerRow.map(canonicalizeHeader); // rewrite known variant spellings to the one true PODs column name
+
+  const dataRows = [];
+  for(let i = headerIdx + 1; i < aoa.length; i++){
+    const r = aoa[i];
+    if(!r || r.length === 0) continue;
+    const first = r[0];
+    if(first === undefined || first === null || String(first).trim() === "") continue;
+    if(String(first).trim().toUpperCase() === "END") break;
+    const obj = {};
+    headerRow.forEach((h, idx) => {
+      let v = r[idx] === undefined ? "" : r[idx];
+      // Street must never merge in as a number — a numeric-looking street
+      // value (e.g. "123") left as a JS number lets Excel reformat/auto-
+      // calculate it later. Cast to text right at merge time so it can't.
+      if(h === "Street" && typeof v === "number") v = String(v);
+      obj[h] = v;
+    });
+    dataRows.push(obj);
+  }
+  return {meta: metaRows, headers: headerRow, rows: dataRows};
+}
+
+// FIX: some source exports (e.g. plain branch/region reports) don't carry the
+// full "PODs Template / Institution / Cut Off Date / No. Of Clients / BEGIN"
+// wrapper — they just have a title row and a spelled-out date row like
+// "Friday, July 31, 2026". Previously that meant the wrapper was silently
+// carried over verbatim (wrong labels, undetected cutoff date, no client
+// count). Now we detect that case and rebuild the standard wrapper so the
+// export always matches the MIDAS PODs Template shape.
+function detectWrapperInfo(metaRows){
+  let institution = null, cutoffDisplay = null;
+  metaRows.forEach(r=>{
+    if(/institution/i.test(String(r[0]||""))) institution = r[1];
+    if(/cut\s*off\s*date/i.test(String(r[0]||""))) cutoffDisplay = r[1];
+  });
+  if(!cutoffDisplay){
+    // scan every cell in the meta rows for anything that parses as a date —
+    // covers title-row styles like "Friday, July 31, 2026"
+    outer:
+    for(const r of metaRows){
+      for(const cell of r){
+        const d = parseAnyDate(cell);
+        if(d){
+          const mm = String(d.getMonth()+1).padStart(2,"0");
+          const dd = String(d.getDate()).padStart(2,"0");
+          cutoffDisplay = `${mm}/${dd}/${d.getFullYear()}`;
+          break outer;
+        }
+      }
+    }
+  }
+  return {institution: institution || "SFI", cutoffDisplay};
+}
+function buildStandardWrapper(metaRows){
+  if(!metaRows.length) return []; // truly flat file (header is row 1) — no wrapper, unchanged behavior
+  const hasWrapper = metaRows.some(r =>
+    /institution/i.test(String(r[0]||"")) || /cut\s*off\s*date/i.test(String(r[0]||"")));
+  const hasTitleRow = metaRows.length>0 && /pods\s*template/i.test(String(metaRows[0][0]||""));
+  if(hasWrapper){
+    const copy = metaRows.map(r => [...r]); // already in the expected shape — keep as-is
+    if(!hasTitleRow) copy.unshift(["PODs Template"]); // A1 must be the title row before Institution
+    return copy;
+  }
+  const {institution, cutoffDisplay} = detectWrapperInfo(metaRows);
+  return [
+    ["PODs Template"],
+    ["Institution", institution],
+    ["Cut Off Date", cutoffDisplay || ""],
+    ["No. Of Clients", ""], // filled in at export time with the cleaned row count
+    ["BEGIN"],
+  ];
+}
+
+function readWorkbook(file, cb){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const wb = XLSX.read(e.target.result, {type:"array", cellDates:true});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, defval:"", raw:true});
+    cb(parseAOA(aoa));
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+document.getElementById("file1").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  document.getElementById("fname1").textContent = f.name;
+  document.getElementById("drop1").classList.add("has-file");
+  readWorkbook(f, parsed=>{ file1Parsed = parsed; checkReadyToMerge(); });
+});
+document.getElementById("file2").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  document.getElementById("fname2").textContent = f.name;
+  document.getElementById("drop2").classList.add("has-file");
+  readWorkbook(f, parsed=>{ file2Parsed = parsed; checkReadyToMerge(); });
+});
+function checkReadyToMerge(){
+  document.getElementById("mergeBtn").disabled = !(file1Parsed && file2Parsed);
+}
+
+function mergeFiles(){
+  // union of headers across both files, File A's order wins
+  const set = [...file1Parsed.headers];
+  file2Parsed.headers.forEach(h => { if(!set.includes(h)) set.push(h); });
+  headers = set;
+  originalHeaders = [...set];
+
+  rows = [...file1Parsed.rows, ...file2Parsed.rows];
+  wbMeta = buildStandardWrapper(file1Parsed.meta); // keep/rebuild File A's template wrapper (Institution/Cut Off Date/etc.)
+  hasRun = false;
+
+  // File A is always the authoritative Street/address source — File B's own
+  // Street values are unreliable and must never carry over into the merge.
+  // Blank them on File B's rows only (File A's rows are untouched).
+  const streetCol = findColumn("street");
+  if(streetCol){
+    let blanked = 0;
+    file2Parsed.rows.forEach(r=>{
+      if(trimVal(r[streetCol]) !== ""){ r[streetCol] = ""; blanked++; }
+    });
+    if(blanked) log(`Blanked ${blanked} Street value(s) from File B — File A is the authoritative Street source.`, "l-info");
+  }
+
+  document.getElementById("runBtn").disabled = false;
+  document.getElementById("downloadBtn").disabled = true;
+  renderTable();
+  log(`Merged ${file1Parsed.rows.length} + ${file2Parsed.rows.length} = ${rows.length} rows across ${headers.length} columns.`, "l-info");
+  if(wbMeta.length) log(`Detected PODs Template wrapper (${wbMeta.length} header lines) — will be preserved on export.`, "l-info");
+  refreshMergeStats();
+}
+function refreshMergeStats(){
+  if(!file1Parsed || !file2Parsed) return;
+  const override = document.getElementById("dateOverride").value;
+  const dateStr = getReportDateForFilename();
+  const dateLabel = override ? "report date (manual override)" : "report date (auto-detected)";
+  document.getElementById("mergeStats").innerHTML = `
+    <div class="stat"><b>${file1Parsed.rows.length}</b>rows in File A</div>
+    <div class="stat"><b>${file2Parsed.rows.length}</b>rows in File B</div>
+    <div class="stat"><b>${rows.length}</b>rows merged</div>
+    <div class="stat"><b>${headers.length}</b>columns</div>
+    <div class="stat"><b>${dateStr || "—"}</b>${dateLabel}</div>`;
+}
+
+// ---------- table rendering ----------
+function renderTable(limit=12){
+  const wrap = document.getElementById("tableWrap");
+  document.getElementById("previewCount").textContent = rows.length ? `${rows.length} rows · ${headers.length} cols (showing first ${Math.min(limit, rows.length)})` : "";
+  if(!rows.length){
+    wrap.innerHTML = `<div class="empty-note">Merge two files to see data here.</div>`;
+    return;
+  }
+  let html = "<table><thead><tr>";
+  headers.forEach(h=> html += `<th>${h}</th>`);
+  html += "</tr></thead><tbody>";
+  rows.slice(0, limit).forEach(r=>{
+    const flagged = r.__flag ? " flagged-row" : "";
+    html += `<tr class="${flagged}">`;
+    headers.forEach(h=> html += `<td>${r[h]===undefined?"":r[h]}</td>`);
+    html += "</tr>";
+  });
+  html += "</tbody></table>";
+  wrap.innerHTML = html;
+}
+
+// ---------- comparator for "A to Z" on mixed numeric/text ----------
+function sortComparator(a,b){
+  const av = trimVal(a), bv = trimVal(b);
+  const an = parseFloat(av), bn = parseFloat(bv);
+  if(!isNaN(an) && !isNaN(bn) && String(an)===av && String(bn)===bv){
+    return an-bn;
+  }
+  return String(av).localeCompare(String(bv), undefined, {sensitivity:"base"});
+}
+
+// ---------- pipeline steps ----------
+function stepSortClientRef(){
+  const col = findColumn("clientRef");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  rows.sort((a,b)=>sortComparator(a[col], b[col]));
+  return {ok:true, msg:`sorted by "${col}"`};
+}
+function stepSortTerm(){
+  const col = findColumn("term");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  rows.sort((a,b)=>sortComparator(a[col], b[col]));
+  return {ok:true, msg:`sorted by "${col}"`};
+}
+function stepFilterTerm(){
+  const col = findColumn("term");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  const before = rows.length;
+  rows = rows.filter(r=>{
+    const v = trimVal(r[col]);
+    return v==="21" || v==="46";
+  });
+  return {ok:true, msg:`kept ${rows.length}/${before} rows (Term 21/46)`};
+}
+function stepSortLoanPurpose(){
+  const col = findColumn("loanPurpose");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  rows.sort((a,b)=>sortComparator(a[col], b[col]));
+  return {ok:true, msg:`sorted by "${col}"`};
+}
+function stepFillBlankLoanPurpose(){
+  const col = findColumn("loanPurpose");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  let count=0;
+  rows.forEach(r=>{
+    if(trimVal(r[col]) === ""){ r[col]="ET"; count++; }
+  });
+  return {ok:true, msg:`filled ${count} blank value(s) with "ET"`};
+}
+function stepReplaceUKtoET(){
+  const col = findColumn("loanPurpose");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  let count=0;
+  rows.forEach(r=>{
+    let v = trimVal(r[col]);
+    if(v.toUpperCase()==="UK"){ r[col]="ET"; count++; }
+    else if(/\bUK\b/i.test(v)){ r[col]=v.replace(/\bUK\b/gi,"ET"); count++; }
+  });
+  return {ok:true, msg:`replaced ${count} value(s)`};
+}
+function stepSortDateGranted(){
+  const col = findColumn("dateGranted");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  rows.sort((a,b)=>sortComparator(a[col], b[col]));
+  return {ok:true, msg:`sorted by "${col}"`};
+}
+function stepSortDateDue(){
+  const col = findColumn("dateDue");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  rows.sort((a,b)=>sortComparator(a[col], b[col]));
+  return {ok:true, msg:`sorted by "${col}"`};
+}
+function stepRemoveBlankDateDue(){
+  const col = findColumn("dateDue");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  const before = rows.length;
+  rows = rows.filter(r=> trimVal(r[col]) !== "");
+  return {ok:true, msg:`removed ${before-rows.length} row(s) with blank "${col}"`};
+}
+function stepRemoveSemiAnnually(){
+  const col = findColumn("paymentFreq");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  const before = rows.length;
+  rows = rows.filter(r=>{
+    const v = trimVal(r[col]).toUpperCase().replace(/[\s-]/g,"");
+    return v!=="SEMIANNUALLY" && v!=="SEMIANNUAL";
+  });
+  return {ok:true, msg:`removed ${before-rows.length} row(s)`};
+}
+function stepSortOutstanding(){
+  const col = findColumn("outstanding");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  rows.sort((a,b)=>sortComparator(a[col], b[col]));
+  return {ok:true, msg:`sorted by "${col}"`};
+}
+function stepSortRemarks(){
+  const col = findColumn("remarks");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  rows.sort((a,b)=>sortComparator(a[col], b[col]));
+  return {ok:true, msg:`sorted by "${col}"`};
+}
+function stepRemoveFullySettled(){
+  const col = findColumn("remarks");
+  const outCol = findColumn("outstanding");
+  if(!col) return {ok:false, msg:`Remarks column not found — skipped. Headers seen: ${headers.join(", ")}`};
+  if(!outCol) return {ok:false, msg:`Outstanding-payments column not found — skipped. Headers seen: ${headers.join(", ")}`};
+
+  const before = rows.length;
+  let fullySettledCount = 0;      // rows whose Remarks matched "Fully Settled"
+  let unparsedOutstanding = [];   // sample raw values that failed to parse as a number
+  const debugSamples = [];        // first few Fully-Settled rows for console inspection
+
+  rows = rows.filter(r=>{
+    const rawRemark = trimVal(r[col]);
+    const isFullySettled = rawRemark.toUpperCase().replace(/\s/g,"") === "FULLYSETTLED";
+    if(!isFullySettled) return true; // not fully settled — keep row
+
+    fullySettledCount++;
+    const rawOut = trimVal(r[outCol]);
+    const outVal = parseFloat(rawOut);
+
+    if(debugSamples.length < 5) debugSamples.push({remarks: rawRemark, outstandingRaw: rawOut, outstandingParsed: outVal});
+    if(isNaN(outVal) && unparsedOutstanding.length < 5) unparsedOutstanding.push(JSON.stringify(rawOut));
+
+    if(!isNaN(outVal) && outVal !== 0) return false; // Fully Settled + non-zero outstanding — delete row
+    return true; // outstanding is 0 (or unreadable) — keep row as-is
+  });
+
+  const count = before - rows.length;
+  console.log('[stepRemoveFullySettled] remarksCol=%s outstandingCol=%s fullySettledFound=%d deleted=%d', col, outCol, fullySettledCount, count);
+  if(typeof console.table === "function") console.table(debugSamples); // some browsers/webviews don't implement console.table — guard it so it can't crash the step
+
+  let msg = `Remarks col="${col}", Outstanding col="${outCol}". Found ${fullySettledCount} "Fully Settled" row(s), deleted ${count} (non-zero outstanding).`;
+  if(fullySettledCount === 0){
+    msg += ` No rows matched "Fully Settled" exactly — check the actual Remarks text (see console for headers/values).`;
+  } else if(unparsedOutstanding.length){
+    msg += ` Warning: ${unparsedOutstanding.length} sample outstanding value(s) didn't parse as numbers: ${unparsedOutstanding.join(", ")}.`;
+  }
+  return {ok:true, msg};
+}
+function stepBlankInvalidMaidenName(){
+  const cols = findMaidenNameColumns();
+  if(!cols.length) return {ok:false, msg:"column not found — skipped"};
+  let count=0;
+  rows.forEach(r=>{
+    cols.forEach(col=>{
+      const v = trimVal(r[col]);
+      if(v!=="" && /[^\p{L}\s'-]/u.test(v)){ r[col]=""; count++; }
+    });
+  });
+  return {ok:true, msg:`blanked ${count} invalid value(s) across ${cols.join(", ")}`};
+}
+function stepFlagUnder18(){
+  const col = findColumn("dob");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  const today = new Date();
+  let count=0;
+  rows.forEach(r=>{
+    const raw = r[col];
+    let d = null;
+    if(raw instanceof Date) d = raw;
+    else if(typeof raw === "number") d = new Date(Math.round((raw-25569)*86400*1000));
+    else if(typeof raw === "string" && raw.trim()!==""){
+      const parsed = new Date(raw);
+      if(!isNaN(parsed)) d = parsed;
+    }
+    if(d){
+      let age = today.getFullYear()-d.getFullYear();
+      const m = today.getMonth()-d.getMonth();
+      if(m<0 || (m===0 && today.getDate()<d.getDate())) age--;
+      if(age<18){ r.__flag=true; count++; } // internal-only marker, never exported
+    }
+  });
+  // Age_Flag is intentionally NOT added to headers/rows — the PODS Template
+  // export must keep the exact same column set as the source file.
+  return {ok:true, msg:`flagged ${count} row(s) as under 18 — not deleted, no column added (PODS columns stay unchanged)`};
+}
+function stepBlankInvalidPlace(){
+  const cols = [findColumn("birthplace"), findColumn("street")].filter(Boolean);
+  if(!cols.length) return {ok:false, msg:"columns not found — skipped"};
+  let count=0;
+  rows.forEach(r=>{
+    cols.forEach(col=>{
+      const v = trimVal(r[col]);
+      if(v!=="" && !/\p{L}/u.test(v)){ r[col]=""; count++; }
+    });
+  });
+  return {ok:true, msg:`blanked ${count} value(s) across ${cols.join(", ")}`};
+}
+function stepRemoveInitials(){
+  // Applies to Middle Name, Previous Last Name, and all Mother's Maiden Name
+  // fields (First / Middle / Last) — findMaidenNameColumns() already matches
+  // MothersMaidenFirstName, so it's covered without touching the client's
+  // own FirstName field.
+  const cols = [findColumn("middleName"), findColumn("prevLastName"), ...findMaidenNameColumns()].filter(Boolean);
+  if(!cols.length) return {ok:false, msg:"columns not found — skipped"};
+  let count=0;
+  rows.forEach(r=>{
+    cols.forEach(col=>{
+      const v = trimVal(r[col]);
+      const isInitial = /^[\p{L}]\.?$/u.test(v);
+      const hasSymbol = v!=="" && /[^\p{L}\s'-]/u.test(v);
+      if(isInitial || hasSymbol){ r[col]=""; count++; }
+    });
+  });
+  return {ok:true, msg:`blanked ${count} value(s) (single initial or contains symbols) across ${cols.join(", ")}`};
+}
+function stepTrimAll(){
+  let count=0;
+  rows.forEach(r=>{
+    headers.forEach(h=>{
+      if(typeof r[h]==="string"){
+        const t = r[h].trim();
+        if(t!==r[h]){ r[h]=t; count++; }
+      }
+    });
+  });
+  return {ok:true, msg:`trimmed ${count} cell(s)`};
+}
+function stepBlankDashedContact(){
+  const col = findColumn("contactNumber");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  let count=0;
+  rows.forEach(r=>{
+    const v = trimVal(r[col]);
+    if(v.includes("-")){ r[col]=""; count++; }
+  });
+  return {ok:true, msg:`blanked ${count} value(s)`};
+}
+function stepRemoveIdColumns(){
+  const cols = headers.filter(isIdColumn);
+  if(!cols.length) return {ok:false, msg:"no ID columns detected — skipped"};
+  let count=0;
+  rows.forEach(r=>{
+    cols.forEach(col=>{
+      if(trimVal(r[col]) !== ""){ r[col]=""; count++; }
+    });
+  });
+  return {ok:true, msg:`blanked ${count} value(s) across ${cols.join(", ")} (headers kept)`};
+}
+function stepRemoveBlankDateGranted(){
+  const col = findColumn("dateGranted");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  const before = rows.length;
+  rows = rows.filter(r=> trimVal(r[col]) !== "");
+  return {ok:true, msg:`removed ${before-rows.length} row(s) with blank "${col}"`};
+}
+function stepSortFirstThenLastName(){
+  const firstCol = findColumn("firstName");
+  const lastCol = findColumn("lastName");
+  if(!firstCol && !lastCol) return {ok:false, msg:"columns not found — skipped"};
+  if(firstCol) rows.sort((a,b)=>sortComparator(a[firstCol], b[firstCol]));
+  if(lastCol) rows.sort((a,b)=>sortComparator(a[lastCol], b[lastCol]));
+  const used = [firstCol, lastCol].filter(Boolean);
+  return {ok:true, msg:`sorted by ${used.join(" then ")}`};
+}
+// Jr./Sr./Junior/Senior + generational roman numerals — anything else in the
+// Suffix column isn't a real name suffix and gets blanked.
+const VALID_NAME_SUFFIXES = /^(jr\.?|junior|sr\.?|senior|i|ii|iii|iv|v|vi)$/i;
+function stepBlankInvalidSuffix(){
+  const col = findColumn("suffix");
+  if(!col) return {ok:false, msg:"column not found — skipped"};
+  let count=0;
+  rows.forEach(r=>{
+    const v = trimVal(r[col]);
+    if(v!=="" && !VALID_NAME_SUFFIXES.test(v)){ r[col]=""; count++; }
+  });
+  return {ok:true, msg:`blanked ${count} invalid Suffix value(s)`};
+}
+function stepCollapseSpaces(){
+  let count=0;
+  rows.forEach(r=>{
+    headers.forEach(h=>{
+      if(typeof r[h]==="string" && /\s{2,}/.test(r[h])){
+        r[h] = r[h].replace(/\s{2,}/g, " ");
+        count++;
+      }
+    });
+  });
+  return {ok:true, msg:`collapsed consecutive spaces in ${count} cell(s)`};
+}
+function stepBlankIncompleteMaidenName(){
+  // MothersMaidenFirstName / MotherMaidenMiddleName / MotherMaidenLastName —
+  // if exactly one of the three columns has a value and the other two are
+  // blank, that's an incomplete maiden name, so blank the lone value too
+  // (leaving all three empty). Applies regardless of which of the three
+  // (First/Middle/Last) is the one holding the value.
+  const cols = findMaidenNameColumns();
+  if(cols.length < 2) return {ok:false, msg:"columns not found — skipped"};
+  let count=0;
+  rows.forEach(r=>{
+    const filled = cols.filter(c=> trimVal(r[c])!=="");
+    if(filled.length === 1){ r[filled[0]]=""; count++; }
+  });
+  return {ok:true, msg:`blanked ${count} incomplete Mother's Maiden Name (single-value) value(s)`};
+}
+
+const STEP_FN = {
+  1: stepSortClientRef, 2: stepSortTerm, 3: stepFilterTerm,
+  4: stepSortLoanPurpose, 5: stepFillBlankLoanPurpose, 6: stepReplaceUKtoET,
+  7: stepSortDateGranted, 8: stepSortDateDue, 9: stepRemoveBlankDateDue,
+  10: stepRemoveSemiAnnually, 11: stepSortOutstanding, 12: stepSortRemarks,
+  13: stepRemoveFullySettled, 14: stepBlankInvalidMaidenName, 15: stepFlagUnder18,
+  16: stepBlankInvalidPlace, 17: stepRemoveInitials, 18: stepTrimAll,
+  19: stepBlankDashedContact, 20: stepRemoveIdColumns, 21: stepRemoveBlankDateGranted,
+  22: stepSortFirstThenLastName,
+  23: stepBlankInvalidSuffix, 24: stepCollapseSpaces, 25: stepBlankIncompleteMaidenName,
+};
+
+function runPipeline(){
+  if(!rows.length) return;
+  document.getElementById("logBox").innerHTML = "";
+  log(`— run started on ${rows.length} rows —`, "l-info");
+  STEP_DEFS.forEach(s=>{
+    const checked = document.getElementById(`chk${s.id}`).checked;
+    if(!checked){
+      setStepState(s.id, null, "skipped (unchecked)");
+      log(`[${String(s.id).padStart(2,"0")}] ${s.title} — skipped by user`, "l-info");
+      return;
+    }
+    setStepState(s.id, "running");
+    const result = STEP_FN[s.id]();
+    setStepState(s.id, result.ok ? "pass" : "flag", result.msg);
+    log(`[${String(s.id).padStart(2,"0")}] ${s.title} — ${result.msg}`, result.ok ? "l-ok" : "l-flag");
+  });
+  log(`— run complete: ${rows.length} rows, ${headers.length} columns remain —`, "l-info");
+  hasRun = true;
+  document.getElementById("downloadBtn").disabled = false;
+  renderTable();
+}
+
+// Finds the date to name the export after. Priority:
+//   1. The manual "Report date" field, if the user filled it in — this is
+//      treated as authoritative since the person reviewing the file knows
+//      the correct cutoff better than any auto-detected guess.
+//   2. The "Cut Off Date" line from the template wrapper (matches how
+//      MIDAS names its own PODs exports, e.g. "All_Branches_07-31-2026_PODS.xlsx").
+//   3. The latest DateGranted/DateDue value found in the data.
+function getReportDateForFilename(){
+  const override = document.getElementById("dateOverride").value; // "YYYY-MM-DD" or ""
+  if(override){
+    const [y,m,d] = override.split("-").map(Number);
+    const od = new Date(y, m-1, d);
+    if(!isNaN(od)) return `${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}-${y}`;
+  }
+
+  const cutoffRow = wbMeta.find(r => /cut\s*off\s*date/i.test(String(r[0]||"")));
+  let raw = cutoffRow ? cutoffRow[1] : null;
+  let d = parseAnyDate(raw);
+
+  if(!d){
+    const candidates = [findColumn("dateDue"), findColumn("dateGranted")].filter(Boolean);
+    let latest = null;
+    rows.forEach(r=>{
+      candidates.forEach(col=>{
+        const dt = parseAnyDate(r[col]);
+        if(dt && (!latest || dt > latest)) latest = dt;
+      });
+    });
+    d = latest;
+  }
+  if(!d) return null;
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  return `${mm}-${dd}-${d.getFullYear()}`;
+}
+document.getElementById("dateOverride").addEventListener("change", ()=>{
+  if(rows.length || file1Parsed) refreshMergeStats();
+});
+function parseAnyDate(v){
+  if(v instanceof Date && !isNaN(v)) return v;
+  if(typeof v === "string" && v.trim()!==""){
+    const p = new Date(v);
+    if(!isNaN(p)) return p;
+  }
+  return null;
+}
+
+async function downloadFile(){
+  const outHeaders = headers.filter(h=>h!=="__flag");
+  const aoa = [];
+  const dateStr = getReportDateForFilename(); // "MM-DD-YYYY" or null
+  const cutOffDateDisplay = dateStr ? dateStr.replace(/-/g, "/") : null; // "MM/DD/YYYY" to match template style
+
+  // rebuild the PODs Template wrapper (Title/Institution/Cut Off Date/
+  // No. Of Clients/BEGIN), taken from File A. "Cut Off Date" is synced to
+  // the same date used for the filename (manual override, if set, wins),
+  // and "No. Of Clients" is updated to the cleaned row total. Plain files
+  // with no wrapper (wbMeta empty) just skip straight to the header row.
+  wbMeta.forEach(r=>{
+    const row = [...r];
+    // Cast to a String so ExcelJS writes this as a text cell, not a number —
+    // that's what reproduces the template's "number stored as text" green-
+    // corner marker on No. Of Clients (matches the reference file exactly).
+    if(/no\.?\s*of\s*clients/i.test(String(row[0]||""))) row[1] = String(rows.length);
+    else if(cutOffDateDisplay && /cut\s*off\s*date/i.test(String(row[0]||""))) row[1] = cutOffDateDisplay;
+    aoa.push(row);
+  });
+  const headerRowNumber = aoa.length + 1; // 1-indexed row where the real header sits
+  aoa.push(outHeaders);
+  rows.forEach(r=> aoa.push(outHeaders.map(h=>{
+    let v = r[h]===undefined ? "" : r[h];
+    if(h==="Street" && typeof v==="number") v = String(v); // safety net — Street exports as text even if a step ever re-numbers it
+    return v;
+  })));
+  if(wbMeta.length) aoa.push(["END"]);
+  const lastRowNumber = aoa.length; // END row (if a wrapper is present) or last data row
+
+  // Build with ExcelJS instead of SheetJS so we can style it to match the
+  // source template: wrapper rows (PODs Template / Institution / Cut Off
+  // Date / No. Of Clients / BEGIN), the real header row, and END are all
+  // Tahoma 10 — bold on col A for the wrapper/END rows, bold across every
+  // column on the header row. The data body underneath is Calibri 10.
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet("Sheet1");
+  aoa.forEach(rowArr => ws.addRow(rowArr));
+
+  ws.eachRow({includeEmpty:true}, (row, rowNumber)=>{
+    const isHeaderRow = rowNumber === headerRowNumber;
+    const isWrapperLabelRow = rowNumber < headerRowNumber; // title/Institution/Cut Off Date/No. Of Clients/BEGIN
+    const isEndRow = wbMeta.length>0 && rowNumber === lastRowNumber;
+    // Wrapper rows + header row + END stay Tahoma 10 (matches the template);
+    // the actual data body is Calibri 10.
+    const isTemplateRow = isHeaderRow || isWrapperLabelRow || isEndRow;
+    row.eachCell({includeEmpty:true}, (cell, colNumber)=>{
+      const bold = isHeaderRow || ((isWrapperLabelRow || isEndRow) && colNumber===1);
+      cell.font = {name: isTemplateRow ? "Tahoma" : "Calibri", size:10, bold};
+    });
+  });
+  ws.columns.forEach(col=>{ col.width = 16; });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const filename = dateStr ? `All Branches ${dateStr} PODS.xlsx` : "midas_pods_cleaned.xlsx";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  log(`Exported "${filename}" — No. Of Clients set to ${rows.length}, Cut Off Date set to ${cutOffDateDisplay || "(unchanged)"}, wrapper/header Tahoma 10 (bold), body Calibri 10.`, "l-ok");
+}
+
+function resetAll(){
+  file1Parsed=null; file2Parsed=null; wbMeta=[]; rows=[]; headers=[]; hasRun=false;
+  document.getElementById("file1").value="";
+  document.getElementById("file2").value="";
+  document.getElementById("fname1").textContent="no file selected";
+  document.getElementById("fname2").textContent="no file selected";
+  document.getElementById("drop1").classList.remove("has-file");
+  document.getElementById("drop2").classList.remove("has-file");
+  document.getElementById("mergeBtn").disabled=true;
+  document.getElementById("runBtn").disabled=true;
+  document.getElementById("downloadBtn").disabled=true;
+  document.getElementById("mergeStats").innerHTML="";
+  document.getElementById("dateOverride").value="";
+  document.getElementById("logBox").innerHTML='<span class="l-info">Waiting for a run&hellip;</span>';
+  renderSteps();
+  renderTable();
+}
+</script>
+</body>
+</html>

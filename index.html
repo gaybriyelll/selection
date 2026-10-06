@@ -27,8 +27,6 @@ h1{font-size:clamp(1.5rem,4.4vw,2.4rem);font-weight:700;margin:46px 0 14px;lette
 :focus-visible{outline:3px solid #d49b00;outline-offset:3px}
 .sub{max-width:950px;margin:0 auto 22px;text-align:left}
 .back{background:none;border:0;color:var(--brand);font:inherit;font-weight:600;cursor:pointer;padding:6px 0}
-.file{max-width:950px;margin:22px auto 0;text-align:left;font-size:.88rem;color:var(--foot)}
-.file button{background:none;border:0;color:var(--title);font:inherit;cursor:pointer;text-decoration:underline;padding:0 4px}
 .foot{margin-top:46px;font-size:.78rem;letter-spacing:.1em;color:var(--foot);text-transform:uppercase}
 .theme{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;background:var(--card);color:var(--head);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font:inherit;font-size:.8rem;cursor:pointer}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--head);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.88rem;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%}
@@ -44,7 +42,6 @@ h1{font-size:clamp(1.5rem,4.4vw,2.4rem);font-weight:700;margin:46px 0 14px;lette
   <div class="brand">
     <span>MIS Operations</span>
   </div>
-  <input type="file" id="cleanerPick" accept=".html,.htm,text/html" hidden>
 
   <h1 id="title">Select the system that you want to view</h1>
   <div class="rule"></div>
@@ -54,7 +51,6 @@ h1{font-size:clamp(1.5rem,4.4vw,2.4rem);font-weight:700;margin:46px 0 14px;lette
   <div id="midas" hidden>
     <div class="sub"><button class="back" id="back" type="button">&larr; Back to systems</button></div>
     <div class="grid" id="midasGrid"></div>
-    <p class="file" id="fileInfo"></p>
   </div>
 
   <div class="foot">Operations Portal · MIS Operations</div>
@@ -89,35 +85,11 @@ function show(view){
   $('#title').textContent=view==='midas'?'Select a Midas tool':'Select the system that you want to view';
 }
 
-/* Cleaner HTML file kept in this browser (IndexedDB) */
-const DB={
-  open(){return new Promise((res,rej)=>{const r=indexedDB.open('sysCards',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
-  async get(k){const d=await this.open();return new Promise((res,rej)=>{const q=d.transaction('f').objectStore('f').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})},
-  async set(k,v){const d=await this.open();return new Promise((res,rej)=>{const q=d.transaction('f','readwrite').objectStore('f').put(v,k);q.onsuccess=()=>res();q.onerror=()=>rej(q.error)})}
-};
-let cleaner=null,wantOpen=false;
-async function loadCleaner(){try{cleaner=await DB.get('cleaner')||null}catch(e){cleaner=null}renderMidas()}
+/* Midas screen: the cleaner ships with the site as cleaner.html (unchanged) */
 function renderMidas(){
-  $('#midasGrid').innerHTML=btnCard('cleanerBtn','cleaner','Midas Cleaner',cleaner?esc(cleaner.name):'Choose your cleaner .html file')+linkCard('link','Midas Link');
-  $('#fileInfo').innerHTML=cleaner?`Cleaner file: <strong>${esc(cleaner.name)}</strong><button type="button" id="replace">Replace file</button>`:'No cleaner file chosen yet. It stays in this browser only.';
+  $('#midasGrid').innerHTML=`<a class="card" href="cleaner.html" target="_blank" rel="noopener">${tile('cleaner')}<span>Midas Cleaner<small>Report Cleaner</small></span></a>`+linkCard('link','Midas Link');
 }
-function launchCleaner(){
-  if(!cleaner){wantOpen=true;$('#cleanerPick').click();return}
-  const w=window.open('','_blank');
-  const url=URL.createObjectURL(new Blob([cleaner.text],{type:'text/html'}));
-  if(!w){toast('Pop-up blocked. Allow pop-ups for this page, then try again.');return}
-  w.location.href=url;
-}
-$('#cleanerPick').addEventListener('change',async e=>{
-  const f=e.target.files[0];e.target.value='';if(!f)return;
-  const text=await f.text();cleaner={name:f.name,text};
-  try{await DB.set('cleaner',cleaner)}catch(err){toast('Loaded for now, but this browser would not save it.')}
-  renderMidas();
-  if(wantOpen){wantOpen=false;toast(f.name+' loaded. Tap Midas Cleaner to open it.')}else toast('Cleaner file replaced.');
-});
 document.addEventListener('click',e=>{
-  if(e.target.closest('#cleanerBtn'))launchCleaner();
-  if(e.target.closest('#replace')){wantOpen=false;$('#cleanerPick').click()}
   if(e.target.closest('#midasCard')){show('midas')}
 });
 $('#back').onclick=()=>show('home');
@@ -128,7 +100,7 @@ $('#theme').onclick=()=>{
 };
 
 $('#home').innerHTML=btnCard('midasCard','midas','Midas','Cleaner and Link')+linkCard('atmos','Atmos Website Card')+linkCard('sms','SMS')+linkCard('cic','CIC');
-renderMidas();loadCleaner();
+renderMidas();
 </script>
 </body>
 </html>

@@ -6,7 +6,8 @@ Plain HTML, CSS and JavaScript. No build step and no dependencies.
 
 ## Files
 
-- `index.html` is the whole app.
+- `index.html` is the portal.
+- `cleaner.html` is the Midas Cleaner (Report Cleaner). It is the original file, unchanged. Do not edit it here unless you mean to replace it.
 - `vercel.json` sets basic security headers for Vercel.
 
 ## Deploy
@@ -23,7 +24,7 @@ The system links are in the `URLS` object near the bottom of `index.html`. Edit 
 
 ## Midas Cleaner
 
-The cleaner is an HTML file you choose from your computer the first time you click **Midas Cleaner**. The portal keeps a copy in that browser's storage (IndexedDB) and opens it in a new tab each time. Nothing is uploaded to the server or to GitHub, so each browser or device needs the file chosen once. Use **Replace file** on the Midas screen to load a newer version.
+The **Midas Cleaner** card opens `cleaner.html`, which is deployed with the site. To update the cleaner later, replace `cleaner.html` with the new file (keep the same name) and push. The cleaner loads its Excel libraries from cdnjs, so it needs an internet connection.
 
 ## Private by default
 
