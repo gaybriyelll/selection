@@ -26,6 +26,10 @@ The system links are in the `URLS` object near the bottom of `index.html`. Edit 
 
 The **Midas Cleaner** card opens `cleaner.html`, which is deployed with the site. To update the cleaner later, replace `cleaner.html` with the new file (keep the same name) and push. The cleaner loads its Excel libraries from cdnjs, so it needs an internet connection.
 
+## Password note
+
+The lock icon on the left opens a sticky note for passwords. It is encrypted (AES-GCM, key from your password using PBKDF2) and saved in that browser's storage only. It is not uploaded to GitHub, Vercel or anywhere else, so each browser or device has its own note. It locks after 2 minutes without typing and when the panel is closed. A forgotten password cannot be recovered.
+
 ## Private by default
 
 The Atmos, SMS and CIC addresses are in the page source. If this repository or the Vercel site is public, anyone can see them. Use a private repository and Vercel's deployment protection if the links should not be public.

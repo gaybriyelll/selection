@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>MIS Operations</title>
+<title>Operations Portal · MIS Operations</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -34,9 +34,72 @@ h1{font-size:clamp(1.5rem,4.4vw,2.4rem);font-weight:700;margin:46px 0 14px;lette
 [hidden]{display:none!important}
 @media (max-width:640px){.grid{grid-template-columns:1fr}.card{min-height:100px;padding:20px}}
 @media (prefers-reduced-motion:reduce){.card:hover{transform:none}.toast{transition:none}}
+
+body{padding-left:56px}
+.rail{position:fixed;top:0;left:0;bottom:0;width:56px;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding-top:calc(16px + env(safe-area-inset-top,0px));z-index:30}
+.railbtn{position:relative;width:42px;height:42px;border-radius:12px;border:0;background:var(--tile);color:var(--icon);display:grid;place-items:center;cursor:pointer}
+.railbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.railbtn.open::after{content:"";position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:#2e9e5b}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20}
+.drawer{position:fixed;top:0;bottom:0;left:56px;width:min(360px,calc(100% - 56px));background:var(--bg);border-right:1px solid var(--line);box-shadow:var(--shadow);z-index:25;padding:calc(20px + env(safe-area-inset-top,0px)) 18px calc(20px + env(safe-area-inset-bottom,0px));overflow:auto;transform:translateX(-110%);visibility:hidden;transition:transform .2s,visibility .2s}
+.drawer.on{transform:none;visibility:visible}
+.drawer h2{margin:0 0 4px;font-size:1.15rem}
+.drawer .hint{color:var(--foot);font-size:.8rem;margin:0 0 14px;line-height:1.5}
+.drawer label{display:block;font-size:.82rem;font-weight:600;margin:10px 0 4px}
+.drawer input[type=password],.drawer input[type=text]{width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--head)}
+.pbtn{font:inherit;font-weight:600;border:0;border-radius:10px;padding:10px 14px;background:var(--title);color:#fff;cursor:pointer;margin-top:12px}
+.pbtn.ghost{background:transparent;color:var(--title);border:1px solid var(--line)}
+.pbtn.warn{background:transparent;color:#b3402a;border:1px solid var(--line)}
+.pbtn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.err{color:#b3402a;font-size:.85rem;min-height:1.2em;margin:8px 0 0}
+.stat{color:var(--foot);font-size:.78rem;margin:8px 0 0}
+.sticky{width:100%;min-height:280px;resize:vertical;font:inherit;font-size:.95rem;line-height:1.55;color:#3a3200;background:#fff0a0;border:0;border-radius:3px 3px 3px 22px;padding:16px;box-shadow:0 8px 16px rgba(60,50,0,.22),inset 0 22px 0 rgba(0,0,0,.05)}
+.sticky:focus-visible{outline:3px solid #d49b00}
+@media (prefers-reduced-motion:reduce){.drawer{transition:none}}
 </style>
 </head>
 <body>
+<aside class="rail"><button class="railbtn" id="railBtn" type="button" aria-label="Open password note" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button></aside>
+<div class="scrim" id="scrim" hidden></div>
+<section class="drawer" id="drawer" aria-label="Password note">
+  <h2>Password note</h2>
+  <p class="hint">Encrypted and kept in this browser only. It is never sent anywhere. If you forget the password, the note cannot be recovered.</p>
+
+  <form id="setupForm" hidden autocomplete="off">
+    <label for="np1">Create a password or PIN (6 or more characters)</label>
+    <input type="password" id="np1" autocomplete="new-password">
+    <label for="np2">Type it again</label>
+    <input type="password" id="np2" autocomplete="new-password">
+    <p class="err" id="setupErr" role="alert"></p>
+    <button class="pbtn" type="submit">Create lock</button>
+  </form>
+
+  <form id="unlockForm" hidden autocomplete="off">
+    <label for="up">Password or PIN</label>
+    <input type="password" id="up" autocomplete="current-password">
+    <p class="err" id="unlockErr" role="alert"></p>
+    <button class="pbtn" id="unlockBtn" type="submit">Unlock</button>
+    <button class="pbtn warn" id="resetBtn2" type="button">Forgot it? Erase the note</button>
+  </form>
+
+  <div id="noteView" hidden>
+    <textarea class="sticky" id="note" spellcheck="false" autocomplete="off" aria-label="Sticky note" placeholder="Write your passwords here, for example: Midas - username / password"></textarea>
+    <p class="stat" id="stat">Locks automatically after 2 minutes without typing.</p>
+    <div class="row">
+      <button class="pbtn" id="lockNow" type="button">Lock now</button>
+      <button class="pbtn ghost" id="chgBtn" type="button">Change password</button>
+    </div>
+    <form id="chgForm" hidden autocomplete="off">
+      <label for="cp1">New password or PIN</label>
+      <input type="password" id="cp1" autocomplete="new-password">
+      <label for="cp2">Type it again</label>
+      <input type="password" id="cp2" autocomplete="new-password">
+      <p class="err" id="chgErr" role="alert"></p>
+      <button class="pbtn" type="submit">Save new password</button>
+    </form>
+  </div>
+</section>
 <button class="theme" id="theme" type="button">Theme</button>
 <main>
   <div class="brand">
@@ -59,6 +122,8 @@ h1{font-size:clamp(1.5rem,4.4vw,2.4rem);font-weight:700;margin:46px 0 14px;lette
 
 <script>
 const I={
+ ace:'<path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
+ site:'<path d="M4 11l8-7 8 7v9H4zM10 20v-6h4v6"/>',
  midas:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
  cleaner:'<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
  link:'<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
@@ -67,6 +132,8 @@ const I={
  cic:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5L15.5 10"/>'
 };
 const URLS={
+ ace:'https://aceportal.acpc.gov.ph/login.php',
+ site:'https://saklawfoundationinc.com/',
  link:'https://midas.midas.com.ph/Main/Login',
  atmos:'https://www.jyosna.net/SFI/?rdr=/SFI/ATMOS/ATMOS.aspx',
  sms:'https://saklawfoundationinc.com/adminjeckpogi/sfisaklaw_foundation_inc_sing-in',
@@ -87,7 +154,7 @@ function show(view){
 
 /* Midas screen: the cleaner ships with the site as cleaner.html (unchanged) */
 function renderMidas(){
-  $('#midasGrid').innerHTML=`<a class="card" href="cleaner.html" target="_blank" rel="noopener">${tile('cleaner')}<span>Midas Cleaner<small>Report Cleaner</small></span></a>`+linkCard('link','Midas');
+  $('#midasGrid').innerHTML=`<a class="card" href="cleaner.html" target="_blank" rel="noopener">${tile('cleaner')}<span>Midas Cleaner<small>Report Cleaner</small></span></a>`+linkCard('link','Midas Link');
 }
 document.addEventListener('click',e=>{
   if(e.target.closest('#midasCard')){show('midas')}
@@ -99,8 +166,102 @@ $('#theme').onclick=()=>{
   r.dataset.theme=dark?'light':'dark';
 };
 
-$('#home').innerHTML=btnCard('midasCard','midas','Midas','Cleaner and Link')+linkCard('atmos','Atmos Website')+linkCard('sms','SMS')+linkCard('cic','CIC');
+$('#home').innerHTML=btnCard('midasCard','midas','Midas','Cleaner and Link')+linkCard('atmos','Atmos Website Card')+linkCard('sms','SMS')+linkCard('cic','CIC')+linkCard('ace','ACE Portal')+linkCard('site','Saklaw Foundation Website');
 renderMidas();
+
+/* Password note: AES-GCM encrypted with a key from your password, stored only in this browser */
+(function(){
+const KEY='mis-vault-v1',ITER=300000,IDLE=120000;
+const enc=new TextEncoder(),dec=new TextDecoder();
+const b64=b=>{let t='';new Uint8Array(b).forEach(x=>t+=String.fromCharCode(x));return btoa(t)};
+const unb64=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
+let vkey=null,vsalt=null,idleT=null,saveT=null,fails=0,okStore=true;
+const rd=()=>{try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}};
+async function derive(pw,salt,n){
+  const m=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:n,hash:'SHA-256'},m,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function save(text){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},vkey,enc.encode(text));
+  try{localStorage.setItem(KEY,JSON.stringify({s:b64(vsalt),i:b64(iv),d:b64(ct),n:ITER}))}catch(e){okStore=false;throw e}
+}
+const view=v=>{
+  $('#setupForm').hidden=v!=='setup';$('#unlockForm').hidden=v!=='locked';$('#noteView').hidden=v!=='open';
+  $('#railBtn').classList.toggle('open',v==='open');
+  const f={setup:'#np1',locked:'#up',open:'#note'}[v];setTimeout(()=>$(f).focus(),50);
+};
+function lock(){
+  vkey=null;vsalt=null;clearTimeout(idleT);clearTimeout(saveT);
+  $('#note').value='';['#np1','#np2','#up','#cp1','#cp2'].forEach(i=>$(i).value='');
+  $('#chgForm').hidden=true;
+  view(rd()?'locked':'setup');
+}
+function bump(){clearTimeout(idleT);if(vkey)idleT=setTimeout(()=>{lock();toast('Password note locked.')},IDLE)}
+function openDrawer(){
+  if(!(window.crypto&&crypto.subtle)){toast('Encryption is not available here. Open the site over https.');return}
+  $('#drawer').classList.add('on');$('#scrim').hidden=false;$('#railBtn').setAttribute('aria-expanded','true');
+  if(!vkey)view(rd()?'locked':'setup');
+}
+function closeDrawer(){
+  lock();$('#drawer').classList.remove('on');$('#scrim').hidden=true;$('#railBtn').setAttribute('aria-expanded','false');$('#railBtn').focus();
+}
+$('#railBtn').onclick=()=>$('#drawer').classList.contains('on')?closeDrawer():openDrawer();
+$('#scrim').onclick=closeDrawer;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#drawer').classList.contains('on'))closeDrawer()});
+
+function checkNew(a,b,err){
+  if(a.length<6){err.textContent='Use at least 6 characters.';return false}
+  if(a!==b){err.textContent='The two entries do not match.';return false}
+  err.textContent='';return true;
+}
+$('#setupForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!checkNew($('#np1').value,$('#np2').value,$('#setupErr')))return;
+  vsalt=crypto.getRandomValues(new Uint8Array(16));
+  vkey=await derive($('#np1').value,vsalt,ITER);
+  try{await save('')}catch(err){vkey=null;$('#setupErr').textContent='This browser would not save the note. Check that storage is allowed.';return}
+  $('#np1').value=$('#np2').value='';view('open');bump();toast('Lock created.');
+});
+$('#unlockForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const v=rd();if(!v){view('setup');return}
+  const btn=$('#unlockBtn');btn.disabled=true;$('#unlockErr').textContent='';
+  try{
+    const salt=unb64(v.s),key=await derive($('#up').value,salt,v.n||ITER);
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(v.i)},key,unb64(v.d));
+    vkey=key;vsalt=salt;fails=0;$('#note').value=dec.decode(pt);$('#up').value='';
+    view('open');bump();btn.disabled=false;
+  }catch(err){
+    fails++;const wait=Math.min(fails*2,30);let t=wait;
+    $('#unlockErr').textContent='Wrong password.';$('#up').value='';
+    const tick=()=>{if(t>0){btn.textContent='Try again in '+t+'s';t--;setTimeout(tick,1000)}else{btn.textContent='Unlock';btn.disabled=false}};tick();
+  }
+});
+$('#note').addEventListener('input',()=>{
+  bump();$('#stat').textContent='Saving…';clearTimeout(saveT);
+  saveT=setTimeout(async()=>{try{await save($('#note').value);$('#stat').textContent='Saved and encrypted. Locks after 2 minutes without typing.'}catch(e){$('#stat').textContent='Could not save. Check that browser storage is allowed.'}},500);
+});
+$('#lockNow').onclick=async()=>{
+  if(vkey){clearTimeout(saveT);try{await save($('#note').value)}catch(e){}}
+  lock();toast('Password note locked.');
+};
+$('#chgBtn').onclick=()=>{$('#chgForm').hidden=!$('#chgForm').hidden;if(!$('#chgForm').hidden)$('#cp1').focus()};
+$('#chgForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!vkey||!checkNew($('#cp1').value,$('#cp2').value,$('#chgErr')))return;
+  const oldKey=vkey,oldSalt=vsalt;
+  try{vsalt=crypto.getRandomValues(new Uint8Array(16));vkey=await derive($('#cp1').value,vsalt,ITER);await save($('#note').value)}
+  catch(err){vkey=oldKey;vsalt=oldSalt;$('#chgErr').textContent='Could not change the password.';return}
+  $('#cp1').value=$('#cp2').value='';$('#chgForm').hidden=true;bump();toast('Password changed.');
+});
+$('#resetBtn2').onclick=()=>{
+  if(!confirm('Erase the note and its password? This cannot be undone.'))return;
+  try{localStorage.removeItem(KEY)}catch(e){}
+  lock();toast('Note erased. Create a new password to start again.');
+};
+['pointerdown','keydown'].forEach(ev=>$('#drawer').addEventListener(ev,bump));
+})();
 </script>
 </body>
 </html>
