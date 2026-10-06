@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Operations Portal · MIS Operations</title>
+<title>MIS Operations</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -87,7 +87,7 @@ function show(view){
 
 /* Midas screen: the cleaner ships with the site as cleaner.html (unchanged) */
 function renderMidas(){
-  $('#midasGrid').innerHTML=`<a class="card" href="cleaner.html" target="_blank" rel="noopener">${tile('cleaner')}<span>Midas Cleaner<small>Report Cleaner</small></span></a>`+linkCard('link','Midas Link');
+  $('#midasGrid').innerHTML=`<a class="card" href="cleaner.html" target="_blank" rel="noopener">${tile('cleaner')}<span>Midas Cleaner<small>Report Cleaner</small></span></a>`+linkCard('link','Midas');
 }
 document.addEventListener('click',e=>{
   if(e.target.closest('#midasCard')){show('midas')}
@@ -99,7 +99,7 @@ $('#theme').onclick=()=>{
   r.dataset.theme=dark?'light':'dark';
 };
 
-$('#home').innerHTML=btnCard('midasCard','midas','Midas','Cleaner and Link')+linkCard('atmos','Atmos Website Card')+linkCard('sms','SMS')+linkCard('cic','CIC');
+$('#home').innerHTML=btnCard('midasCard','midas','Midas','Cleaner and Link')+linkCard('atmos','Atmos Website')+linkCard('sms','SMS')+linkCard('cic','CIC');
 renderMidas();
 </script>
 </body>
